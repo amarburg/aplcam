@@ -41,21 +41,17 @@ namespace AplCam {
 
   class InMemoryDetectionDb;
 
-  void   to_json(json& j, const InMemoryDetectionDb& p);
-  void from_json(const json& j, InMemoryDetectionDb& p);
-
-
   class InMemoryDetectionDb {
   public:
 
     typedef std::map< std::string, std::shared_ptr<Detection> > DetectionMap;
 
-
-    InMemoryDetectionDb( );
-    InMemoryDetectionDb( const std::string &filename );
+    //InMemoryDetectionDb( );
+    InMemoryDetectionDb( const std::string &filename = std::string() );
     ~InMemoryDetectionDb();
 
     void setFilename( const std::string &filename );
+    std::string filename() const { return _filename; }
 
     void load();
     virtual void save();
@@ -78,6 +74,9 @@ namespace AplCam {
     std::string _filename;
 
   };
+
+  void   to_json(json& j, const InMemoryDetectionDb& p);
+  void from_json(const json& j, InMemoryDetectionDb& p);
 
 
 

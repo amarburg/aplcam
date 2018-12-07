@@ -11,14 +11,15 @@ namespace AplCam {
 
   using namespace std;
 
-  InMemoryDetectionDb::InMemoryDetectionDb(  )
-    : _filename("")
-  {
-  }
+  // InMemoryDetectionDb::InMemoryDetectionDb(  )
+  //   : _filename("")
+  // {
+  // }
 
   InMemoryDetectionDb::InMemoryDetectionDb( const std::string &filename )
     : _filename(filename)
   {
+    LOG(INFO) << "Filename: " << filename;
     if( !filename.empty() ) {
       load();
     }
@@ -26,7 +27,6 @@ namespace AplCam {
 
   InMemoryDetectionDb::~InMemoryDetectionDb()
   {
-    save();
   }
 
   void InMemoryDetectionDb::setFilename( const std::string &filename ) {
@@ -35,8 +35,11 @@ namespace AplCam {
 
   void InMemoryDetectionDb::save()
   {
+    if( _filename.empty() ) return;
+
     json j = *this;
 
+    LOG(DEBUG) << "Saving db to " << _filename;
     ofstream out( _filename );
 
     // From the json.hpp docs: the setw manipulator was overloaded to set the indentation for pretty printing
@@ -46,10 +49,22 @@ namespace AplCam {
   void InMemoryDetectionDb::load()
   {
     ifstream in( _filename );
-    json j;
-    in >> j;
 
-    *this = j;
+    if( !in.is_open() ) {
+      LOG(DEBUG) << "File " << _filename << " doesn't exist, initializing empty database";
+      return;
+    }
+
+    json j;
+
+    try {
+      in >> j;
+    } catch( std::exception p ) {
+      LOG(WARNING) << "Unable to parse existing JSON, starting with empty db";
+      return;
+    }
+
+    from_json( j, *this );
   }
 
   bool InMemoryDetectionDb::insert( const std::string &frame, const std::shared_ptr<Detection> &detection ) {
@@ -82,15 +97,17 @@ namespace AplCam {
   void from_json(const json& j, InMemoryDetectionDb& db) {
     db._map.clear();
 
-    json jdet = j["detections"];
+    if( j.count("detections") > 0 ) {
+      json jdet = j["detections"];
 
-    for (json::iterator det = jdet.begin(); det != jdet.end(); ++det) {
-        LOG(DEBUG) << "   loading: " << det.key();
+      for (json::iterator det = jdet.begin(); det != jdet.end(); ++det) {
+          LOG(DEBUG) << "   loading: " << det.key();
 
-        std::shared_ptr<Detection> detection( new Detection );
-        *(detection.get()) = det.value();
+          std::shared_ptr<Detection> detection( new Detection );
+          *(detection.get()) = det.value();
 
-        db.insert( det.key(), detection );
+          db.insert( det.key(), detection );
+      }
     }
 
   }
