@@ -2,8 +2,7 @@
 #include <iostream>
 
 #include <opencv2/core/affine.hpp>
-
-#include <glog/logging.h>
+#include <libg3logger/g3logger.h>
 
 #include "AplCam/distortion/pinhole_camera.h"
 

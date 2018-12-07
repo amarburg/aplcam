@@ -2,9 +2,9 @@ imports:
     fips-googletest:
         git: https://github.com/amarburg/fips-googletest.git
     libg3logger:
-        git: https://github.com/amarburg/libg3logger.git
+        git: https://github.com/apl-ocean-engineering/libg3logger.git
     apriltags:
-        git: https://github.com/amarburg/apriltags.git
+        git: https://github.com/apl-ocean-engineering/apriltags.git
         branch: fips
         cond: "USE_APRILTAGS"
 

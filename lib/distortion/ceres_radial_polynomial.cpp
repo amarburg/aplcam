@@ -8,12 +8,15 @@
 
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
+// Neuter GoogleLogging, which is included by Ceres
+#undef LOG
 
 #include <boost/thread.hpp>
 
 #include <iostream>
 using namespace std;
 
+#include <libg3logger/g3logger.h>
 #include "AplCam/distortion/ceres_reprojection_error.h"
 
 namespace Distortion {
@@ -108,15 +111,13 @@ namespace Distortion {
       cv::TermCriteria criteria)
   {
 
-    // Check and see if the camera matrix has been initialized
+
+    // If camera matris is unset, get a default from the focal length and img size hints
     if( norm( matx(), Mat::eye(3,3,CV_64F) ) < 1e-9 ) {
       LOG(INFO) << "Setting initial camera estimate.";
-      setCamera( InitialCameraEstimate( image_size ) );
+      //setCamera( InitialCameraEstimate( _imageSizeHint ) );
+      setCamera( _focalLengthHint, _focalLengthHint, _imgSizeHint.width/2.0, _imgSizeHint.height/2.0, 0 );
     }
-
-    // TODO.  From OpenCV, the focal length can be initialized by considering
-    // vanishing points from plane-to-image homographies
-    setCamera( 5000, 5000, 960, 520, 0 );
 
     int totalPoints = 0;
     int goodImages = 0;
@@ -124,8 +125,7 @@ namespace Distortion {
     for( size_t i = 0; i < objectPoints.size(); ++i )  {
       if( result.status[i] ) {
         // In this case, we can use OpenCV's solvePnP directly
-        bool pnpRes = solvePnP( objectPoints[i], imagePoints[i], mat(), _distCoeffs,
-            result.rvecs[i], result.tvecs[i], false, CV_ITERATIVE );
+        bool pnpRes = solvePnP( objectPoints[i], imagePoints[i], mat(), _distCoeffs, result.rvecs[i], result.tvecs[i], false, CV_ITERATIVE );
 
         //LOG(INFO) << "Pnp: " << (pnpRes ? "" : "FAIL"); // << endl << result.rvecs[i] << endl << result.tvecs[i];
 
@@ -142,7 +142,7 @@ namespace Distortion {
       }
     }
 
-    cout << "From " << objectPoints.size() << " images, using " << totalPoints << " from " << goodImages << " images" << endl;
+    LOG(INFO) << "From " << objectPoints.size() << " images, using " << totalPoints << " from " << goodImages << " images" << endl;
 
     LOG(INFO) << "Dist coeffs: " << _distCoeffs;
 
@@ -215,13 +215,13 @@ namespace Distortion {
     //problem.SetParameterBlockConstant( &(_distCoeffs[0]) );
     //problem.SetParameterBlockConstant( &(_distCoeffs[2]) );
 
-    problem.SetParameterUpperBound( camera, 2, 1920 );
-    problem.SetParameterUpperBound( camera, 3, 1080 );
-    problem.SetParameterLowerBound( camera, 0, 0 );
-    problem.SetParameterLowerBound( camera, 1, 0 );
+
+    problem.SetParameterLowerBound( camera, 0, 1 );
+    problem.SetParameterLowerBound( camera, 1, 1 );
     problem.SetParameterLowerBound( camera, 2, 0 );
     problem.SetParameterLowerBound( camera, 3, 0 );
-    // FOO
+    problem.SetParameterUpperBound( camera, 2, _imgSizeHint.width );
+    problem.SetParameterUpperBound( camera, 3, _imgSizeHint.height );
 
     // Fragile
     if( flags & CV_CALIB_ZERO_TANGENT_DIST ) problem.SetParameterBlockConstant( &(_distCoeffs[2]) );
@@ -238,7 +238,7 @@ namespace Distortion {
 
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
-    std::cout << summary.FullReport() << "\n";
+    LOG(INFO) << summary.FullReport();
 
     for( size_t i = 0, idx=0; i < objectPoints.size(); ++i ) {
       if( result.status[i] ) {
@@ -273,8 +273,8 @@ namespace Distortion {
 
     result.rms = reprojectionError( objectPoints, result.rvecs, result.tvecs, imagePoints, result.reprojErrors, result.status );
 
-    cout << "Final camera: " << endl << matx() << endl;
-    cout << "Final distortions: " << endl << _distCoeffs << endl;
+    LOG(INFO) << "Final camera: " <<  matx();
+    LOG(INFO) << "Final distortions: " << _distCoeffs;
 
     return true;
   }

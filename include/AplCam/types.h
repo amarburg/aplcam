@@ -4,17 +4,12 @@
 
 #include <opencv2/core/core.hpp>
 
-#include "nlohmann/json.hpp"
-
-
 namespace AplCam {
   using cv::Vec3f;
   using cv::Vec2f;
   using cv::Vec3d;
 
   using std::vector;
-
-  using nlohmann::json;
 
   typedef Vec3f ObjectPoint;
   typedef vector< ObjectPoint > ObjectPointsVec;

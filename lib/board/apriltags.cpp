@@ -9,7 +9,7 @@
 
 #include <opencv2/highgui/highgui.hpp>
 
-#include <glog/logging.h>
+#include <libg3logger/g3logger.h>
 
 #include "AprilTags/SubtagDetector.h"
 
@@ -85,7 +85,7 @@ namespace AplCam {
   Detection *AprilTagsBoard::attemptSubtagDetection( const Mat &gray, vector<AprilTags::TagDetection> &detections )
   {
     if( _tagSize.width < 0.0 ) {
-      LOG(ERROR) << "Tag size not specified in board file, cannot do subtag detection.";
+      LOG(WARNING) << "Tag size not specified in board file, cannot do subtag detection.";
       return NULL;
     }
 
@@ -179,7 +179,7 @@ namespace AplCam {
       //   ids.push_back( _det[i].id );
       //
       // } else {
-        LOG(ERROR) << "Couldn't find tag ID \'" << id << "\'" << endl;
+        LOG(WARNING) << "Couldn't find tag ID \'" << id << "\'";
       }
 
       return Board::worldLocation(loc);

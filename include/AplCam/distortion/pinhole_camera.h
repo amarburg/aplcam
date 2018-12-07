@@ -69,8 +69,11 @@ namespace Distortion {
           const Vec3d &_rvec, const Vec3d &_tvec, ImagePointsVec &imagePoints ) const = 0;
 
 
-
       virtual Mat coefficientsMat( void ) const = 0;
+
+
+      void imageSizeHint( const cv::Size &sz ) { _imgSizeHint = sz; }
+      void focalLengthHint( float f ) { _focalLengthHint = f; }
 
     protected:
 
@@ -81,7 +84,11 @@ namespace Distortion {
           cv::TermCriteria criteria = cv::TermCriteria(cv::TermCriteria::COUNT+cv::TermCriteria::EPS, 100, DBL_EPSILON)  ) { return false; };
 
       // Private constructor
-      Camera() {;}
+      Camera()
+          : _imgSizeHint(1920,1080), _focalLengthHint(600) {;}
+
+      cv::Size _imgSizeHint;
+      float _focalLengthHint;
   };
 
   class PinholeCamera : public Camera {

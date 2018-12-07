@@ -1,8 +1,5 @@
 
-#ifndef __DISTORTION_ANGULAR_POLYNOMIAL_H__
-#define __DISTORTION_ANGULAR_POLYNOMIAL_H__
-
-#include <opencv2/core/core.hpp>
+#pragma once
 
 #include "AplCam/cv_types.h"
 #include "AplCam/distortion/distortion_model.h"
@@ -13,6 +10,7 @@ namespace Distortion {
   using cv::Vec8d;
 
 
+  // Inplements the angular distortion model of ...
   class AngularPolynomial : public DistortionModel {
     public:
 
@@ -79,6 +77,3 @@ namespace Distortion {
   };
 
 }
-
-
-#endif

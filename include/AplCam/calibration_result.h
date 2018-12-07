@@ -1,16 +1,19 @@
-#ifndef __CALIBRATION_RESULT_H__
-#define __CALIBRATION_RESULT_H__
+#pragma once
 
 #include <opencv2/core/core.hpp>
 
 #include <vector>
 #include <string>
 
+#include <nlohmann/json.hpp>
+
+
 #include "AplCam/types.h"
 
 namespace AplCam {
 
   using cv::FileStorage;
+  using nlohmann::json;
 
   struct Result {
     Result( size_t sz = 0 )
@@ -124,5 +127,3 @@ namespace AplCam {
   void from_json(const json& j, CalibrationResult& p);
 
 }
-
-#endif

@@ -11,6 +11,8 @@
 
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
+// Neuter GoogleLogging, which is included by Ceres
+#undef LOG
 
 #include <boost/thread.hpp>
 
@@ -18,6 +20,8 @@
 #include <iomanip>
 using namespace std;
 
+
+#include <libg3logger/g3logger.h>
 #include "AplCam/distortion/ceres_reprojection_error.h"
 
 namespace Distortion {
@@ -143,12 +147,12 @@ namespace Distortion {
       cv::TermCriteria criteria)
   {
 
-    // Check and see if the camera matrix has been initialized
-    if( norm( matx(), Mat::eye(3,3,CV_64F) ) < 1e-9 )
-      setCamera( InitialCameraEstimate( image_size ) );
-
-
-    setCamera( 5000, 5000, 960, 520, 0 );
+    // If camera matris is unset, get a default from the focal length and img size hints
+    if( norm( matx(), Mat::eye(3,3,CV_64F) ) < 1e-9 ) {
+      LOG(INFO) << "Setting initial camera estimate.";
+      //setCamera( InitialCameraEstimate( _imageSizeHint ) );
+      setCamera( _focalLengthHint, _focalLengthHint, _imgSizeHint.width/2.0, _imgSizeHint.height/2.0, 0 );
+    }
 
     int totalPoints = 0;
     int goodImages = 0;
@@ -170,7 +174,7 @@ namespace Distortion {
       }
     }
 
-    LOG(INFO) << "From " << objectPoints.size() << " images, using " << totalPoints << " from " << goodImages << " images" << endl;
+    LOG(INFO) << "From " << objectPoints.size() << " images, using " << totalPoints << " point from " << goodImages << " of the images" << endl;
 
 
     double camera[4] = { _fx, _fy, _cx, _cy };
@@ -232,7 +236,7 @@ namespace Distortion {
 
     ceres::Solver::Summary summary;
     ceres::Solve(options, &problem, &summary);
-    std::cout << summary.FullReport() << "\n";
+    LOG(INFO) << summary.FullReport();
 
     for( size_t i = 0, idx=0; i < objectPoints.size(); ++i ) {
       if( result.status[i] ) {

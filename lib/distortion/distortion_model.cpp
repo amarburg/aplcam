@@ -113,7 +113,6 @@ namespace Distortion {
 
   DistortionModel::DistortionModelType_t DistortionModel::ParseDistortionModel( const string &arg )
     {
-      cout << arg << endl;
       if( arg.compare("angular") == 0 ) {
         return ANGULAR_POLYNOMIAL;
       } else if ( arg.compare("radial") == 0 ) {
@@ -143,7 +142,7 @@ namespace Distortion {
         case RADIAL8_POLYNOMIAL:
 //          cout << "Using radial polynomial (normal OpenCV) 8-coefficient calibration" << endl;
 //          return new Distortion::RadialPolynomial( CV_CALIB_RATIONAL_MODEL );
-return NULL;
+            return NULL;
           break;
 
         case OPENCV_RADIAL:

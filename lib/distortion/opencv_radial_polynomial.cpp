@@ -92,8 +92,8 @@ namespace Distortion {
         }
       }
 
-      LOG(INFO) << "Camera" << endl << camera;
-      LOG(INFO) << "Distortion coeffs: " << endl << _distCoeffs;
+      LOG(INFO) << "Camera:" << camera;
+      LOG(INFO) << "Distortion coeffs: " << _distCoeffs;
 
       result.good = true;
       return result.good;

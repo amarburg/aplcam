@@ -1,5 +1,5 @@
 
-#include <glog/logging.h>
+#include "libg3logger/g3logger.h"
 
 #include "AplCam/image_accumulator.h"
 
@@ -29,12 +29,12 @@ bool ImageAccumulator::add( const Mat &mat )
 
   if( _imgs.size() > 0 ) {
     if( mat.size() != _imgs.front().size() ) {
-      LOG(ERROR) << "Trying to add image to accumulator which doesn't have same size as others.";
+      LOG(WARNING) << "Trying to add image to accumulator which doesn't have same size as others.";
       return false;
     }
 
     if( mat.type() != _imgs.front().type() ) {
-      LOG(ERROR) << "Trying to add image to accumulator which doesn't have same type as others.";
+      LOG(WARNING) << "Trying to add image to accumulator which doesn't have same type as others.";
       return false;
     }
 

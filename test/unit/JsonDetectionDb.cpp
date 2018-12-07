@@ -13,25 +13,23 @@ namespace {
 
   using nlohmann::json;
 
-  TEST( InMemoryDetectionDb, Constructor ) {
-
-    InMemoryDetectionDb db;
-
+  TEST( JsonDetectionDb, Constructor ) {
+    JsonDetectionDb db;
   }
 
 
-  TEST( InMemoryDetectionDb, SerializeToJson ) {
-    InMemoryDetectionDb db;
+  TEST( JsonDetectionDb, SerializeToJson ) {
+    JsonDetectionDb db;
 
     json j = db;
 
   }
 
-  TEST( InMemoryDetectionDb, SerializeFromJson ) {
+  TEST( JsonDetectionDb, SerializeFromJson ) {
 
     json j;
 
-    InMemoryDetectionDb db = j;
+    JsonDetectionDb db = j;
   }
 
 }

@@ -11,8 +11,7 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include <glog/logging.h>
-
+#include <libg3logger/g3logger.h>
 #include <iostream>
 using namespace std;
 
@@ -93,7 +92,7 @@ namespace Distortion {
       int flags,
       cv::TermCriteria criteria)
       {
-        LOG(ERROR) << "RadialPolynomial can't calibrate.  Use CeresRadialPolynomial or OpencvRadialPolynomial.";
+        LOG(WARNING) << "RadialPolynomial can't calibrate.  Use CeresRadialPolynomial or OpencvRadialPolynomial.";
         return false;
       }
 

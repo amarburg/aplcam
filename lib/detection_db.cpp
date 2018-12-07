@@ -11,12 +11,12 @@ namespace AplCam {
 
   using namespace std;
 
-  // InMemoryDetectionDb::InMemoryDetectionDb(  )
+  // JsonDetectionDb::JsonDetectionDb(  )
   //   : _filename("")
   // {
   // }
 
-  InMemoryDetectionDb::InMemoryDetectionDb( const std::string &filename )
+  JsonDetectionDb::JsonDetectionDb( const std::string &filename )
     : _filename(filename)
   {
     LOG(INFO) << "Filename: " << filename;
@@ -25,15 +25,15 @@ namespace AplCam {
     }
   }
 
-  InMemoryDetectionDb::~InMemoryDetectionDb()
+  JsonDetectionDb::~JsonDetectionDb()
   {
   }
 
-  void InMemoryDetectionDb::setFilename( const std::string &filename ) {
+  void JsonDetectionDb::setFilename( const std::string &filename ) {
     _filename = filename;
   }
 
-  void InMemoryDetectionDb::save()
+  void JsonDetectionDb::save()
   {
     if( _filename.empty() ) return;
 
@@ -46,7 +46,7 @@ namespace AplCam {
     out << std::setw(4) << j;
   }
 
-  void InMemoryDetectionDb::load()
+  void JsonDetectionDb::load()
   {
     ifstream in( _filename );
 
@@ -67,34 +67,45 @@ namespace AplCam {
     from_json( j, *this );
   }
 
-  bool InMemoryDetectionDb::insert( const std::string &frame, const std::shared_ptr<Detection> &detection ) {
+  bool JsonDetectionDb::insert( const std::string &frame, const std::shared_ptr<Detection> &detection ) {
     _map.insert( std::make_pair( frame, detection ) );
     return true;
   }
 
-  std::shared_ptr<Detection> InMemoryDetectionDb::at( const std::string &frame ) {
+  std::shared_ptr<Detection> JsonDetectionDb::at( const std::string &frame ) {
     return _map.at( frame );
   }
 
-  bool InMemoryDetectionDb::setMeta( unsigned int length, int width, int height, float fps ) {
+  //=== Meta-information that might be added to detection db
+
+  void JsonDetectionDb::setMeta( const cv::Size &sz, float fps ) {
+    _meta["image_size"] = {sz.width, sz.height};
+    _meta["fps"] = fps;
+  }
+
+  bool JsonDetectionDb::imageSize( cv::Size &sz ) {
+    if( _meta.count("image_size") == 0 ) return false;
+
+    sz = cv::Size( _meta["image_size"][0], _meta["image_size"][1] );
     return true;
   }
 
   //======
 
-  void to_json(json& j, const InMemoryDetectionDb& p) {
+  void to_json( json& j, const JsonDetectionDb &db ) {
     j = {};
 
     json detections = {};
 
-    for( auto const &itr : p._map ) {
+    for( auto const &itr : db._map ) {
       detections[itr.first] = *(itr.second);
     }
 
     j["detections"] = detections;
+    j["meta"] = db._meta;
   }
 
-  void from_json(const json& j, InMemoryDetectionDb& db) {
+  void from_json(const json& j, JsonDetectionDb& db) {
     db._map.clear();
 
     if( j.count("detections") > 0 ) {
@@ -109,6 +120,8 @@ namespace AplCam {
           db.insert( det.key(), detection );
       }
     }
+
+    if( j.count("meta") > 0 ) db._meta = j["meta"];
 
   }
 

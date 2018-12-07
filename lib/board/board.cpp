@@ -5,7 +5,7 @@
 #include <opencv2/calib3d/calib3d.hpp>
 #include <opencv2/imgproc/imgproc.hpp>
 
-#include <glog/logging.h>
+#include <libg3logger/g3logger.h>
 
 #include "AplCam/board/board.h"
 #include "AplCam/board/apriltags.h"
@@ -93,10 +93,10 @@ namespace AplCam {
       LOG(INFO) << "Creating Apriltags 36H11 board.";
       board = AprilTagsBoard::Load( fs, name );
   #else
-      LOG(ERROR) << "Not compiled for Apriltags." << endl;
+      LOG(FATAL) << "Not compiled for Apriltags." << endl;
   #endif
     } else {
-      LOG(ERROR) << "Don't know how to handle board type \"" << type_s << "\"" << endl;
+      LOG(WARNING) << "Don't know how to handle board type \"" << type_s << "\"" << endl;
     }
 
     board->loadCallback( fs );

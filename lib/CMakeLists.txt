@@ -15,7 +15,6 @@ fips_begin_lib( aplcam )
     #leveldb_detection_db.cpp
     detection_set.cpp
     my_undistort.cpp
-    ${APRILTAG_SRCS}
     file_utils.cpp
     synchronizer.cpp
     trendnet_time_code.cpp
@@ -63,7 +62,6 @@ fips_begin_lib( aplcam )
     ${GSL_LIBRARIES}
     ${CERES_LIBRARIES}
     ${LevelDB_LIBRARIES}
-    cryptopp
-    glog )
+    cryptopp )
 
 fips_end_lib()

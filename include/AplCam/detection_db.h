@@ -29,26 +29,23 @@ namespace AplCam {
 
        virtual void save() {;}
 
-  //     virtual Detection *load( const int frame ) = 0;
-
        virtual bool insert( const std::string &frame, const std::shared_ptr<Detection> &detection ) = 0;
        virtual std::shared_ptr<Detection> at( const std::string &frame ) = 0;
 
-       virtual bool setMeta( unsigned int length, int width, int height, float fps ) = 0;
+       virtual void setMeta( const cv::Size &sz, float fps ) = 0;
+       virtual bool imageSize( cv::Size &sz ) = 0;
 
   };
 
 
-  class InMemoryDetectionDb;
-
-  class InMemoryDetectionDb {
+  class JsonDetectionDb {
   public:
 
     typedef std::map< std::string, std::shared_ptr<Detection> > DetectionMap;
 
-    //InMemoryDetectionDb( );
-    InMemoryDetectionDb( const std::string &filename = std::string() );
-    ~InMemoryDetectionDb();
+    //JsonDetectionDb( );
+    JsonDetectionDb( const std::string &filename = std::string() );
+    ~JsonDetectionDb();
 
     void setFilename( const std::string &filename );
     std::string filename() const { return _filename; }
@@ -56,14 +53,18 @@ namespace AplCam {
     void load();
     virtual void save();
 
+    const json meta() const { return _meta; }
+
     virtual bool insert( const std::string &frame, const std::shared_ptr<Detection> &detection );
     virtual std::shared_ptr<Detection> at( const std::string &frame );
 
-    virtual bool setMeta( unsigned int length, int width, int height, float fps );
+    virtual void setMeta( const cv::Size &sz, float fps=0.0 );
+    virtual bool imageSize( cv::Size &sz );
+
 
     // Friend functions for serializing and unserializaing to JSON
-    friend void to_json(json& j, const InMemoryDetectionDb& p);
-    friend void from_json(const json& j, InMemoryDetectionDb& p);
+    friend void to_json(json& j, const JsonDetectionDb& p);
+    friend void from_json(const json& j, JsonDetectionDb& p);
 
     const DetectionMap &map() const { return _map; }
 
@@ -73,10 +74,12 @@ namespace AplCam {
 
     std::string _filename;
 
+    json _meta;
+
   };
 
-  void   to_json(json& j, const InMemoryDetectionDb& p);
-  void from_json(const json& j, InMemoryDetectionDb& p);
+  void   to_json(json& j, const JsonDetectionDb& p);
+  void from_json(const json& j, JsonDetectionDb& p);
 
 
 

@@ -1,6 +1,8 @@
 
 #include <iostream>
 
+#include <libg3logger/g3logger.h>
+
 #include "AplCam/distortion/camera_factory.h"
 
 #include "AplCam/distortion/angular_polynomial.h"
@@ -36,7 +38,7 @@ namespace Distortion {
                (type.compare( OpencvRadialPolynomial::Name() ) == 0)) {
       out = RadialPolynomial::Load( fs );
     } else {
-      cerr << "Don't know how to create a camera of type \"" << type << "\"" << endl;
+      LOG(WARNING) << "Don't know how to create a camera of type \"" << type << "\"";
     }
 
     return out;

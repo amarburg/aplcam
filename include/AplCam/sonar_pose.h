@@ -1,5 +1,4 @@
-#ifndef __SONAR_POSE_H__
-#define __SONAR_POSE_H__
+#pragma once
 
 #include <string>
 
@@ -7,8 +6,6 @@
 #include <opencv2/calib3d/calib3d.hpp>
 
 #include <Eigen/Core>
-
-#include  <glog/logging.h>
 
 #include "AplCam/sonar_types.h"
 
@@ -60,5 +57,3 @@ float _scale;
 };
 
 }
-
-#endif

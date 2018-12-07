@@ -3,6 +3,7 @@
 #else
 
 #include <opencv2/calib3d/calib3d.hpp>
+#include <libg3logger/g3logger.h>
 
 #include "AplCam/file_utils.h"
 
@@ -10,7 +11,6 @@
 #include "AplCam/detection/apriltags.h"
 #include "AplCam/board/apriltags.h"
 
-#include <glog/logging.h>
 
 namespace AplCam {
   using namespace std;

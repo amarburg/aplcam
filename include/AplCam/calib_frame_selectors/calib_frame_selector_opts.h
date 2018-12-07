@@ -1,6 +1,5 @@
 
-#ifndef __CALIB_FRAME_SELECTOR_OPTS_H__
-#define __CALIB_FRAME_SELECTOR_OPTS_H__
+#pragma once
 
 #include <limits.h>
 #include <unistd.h>
@@ -9,7 +8,6 @@
 #include <string>
 
 #include <tclap/CmdLine.h>
-#include <glog/logging.h>
 
 #include "AplCam/calib_frame_selectors.h"
 
@@ -105,5 +103,3 @@ namespace AplCam {
 
   }
 }
-
-#endif

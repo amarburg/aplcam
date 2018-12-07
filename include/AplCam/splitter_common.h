@@ -1,6 +1,4 @@
-#ifndef __SPLITTER_COMMON_H__
-#define __SPLITTER_COMMON_H__
-
+#pragma once
 
 #include <stdlib.h>
 #include <getopt.h>
@@ -13,7 +11,6 @@
 #include <opencv2/imgproc/imgproc.hpp>
 
 #include <tclap/CmdLine.h>
-#include <glog/logging.h>
 
 #include "AplCam/file_utils.h"
 
@@ -99,5 +96,3 @@ namespace AplCam {
 
 
 }
-
-#endif

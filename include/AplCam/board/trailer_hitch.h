@@ -1,9 +1,12 @@
 #pragma once
 
+#include <nlohmann/json.hpp>
+
 #include "AplCam/board/circle.h"
 
 namespace AplCam {
 
+  using json = nlohmann::json;
 
   class TrailerHitch : public ColorSegmentationCircleBoard {
    public:
@@ -23,9 +26,8 @@ namespace AplCam {
 
        virtual Detection *detectPattern( const cv::Mat &img ) const;
 
-       unsigned int _hue;
-
        std::string name;
+       unsigned int _hue;
      };
 
      vector<HueTarget> _targets;
