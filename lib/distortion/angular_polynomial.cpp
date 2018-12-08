@@ -13,6 +13,8 @@
 #include <ceres/rotation.h>
 // Neuter GoogleLogging, which is included by Ceres
 #undef LOG
+#undef LOG_IF
+#undef CHECK
 
 #include <boost/thread.hpp>
 
@@ -123,7 +125,7 @@ namespace Distortion {
       : camera_(camera), alpha_(alpha), dist_(dist), lossFunc_( lossF )
     {;}
 
-    void add( ceres::Problem &problem, const ObjectPoint &obj, const ImagePoint &img, double *pose )
+    void addCorrespondence( ceres::Problem &problem, const ObjectPoint &obj, const ImagePoint &img, double * )
     {
 
       ceres::CostFunction *costFunction = (new ceres::AutoDiffCostFunction<AngularDistortionReprojError, 2, 4, 1, 4, 6>(
@@ -147,7 +149,7 @@ namespace Distortion {
       cv::TermCriteria criteria)
   {
 
-    // If camera matris is unset, get a default from the focal length and img size hints
+    // If camera matrix is unset, get a default from the focal length and img size hints
     if( norm( matx(), Mat::eye(3,3,CV_64F) ) < 1e-9 ) {
       LOG(INFO) << "Setting initial camera estimate.";
       //setCamera( InitialCameraEstimate( _imageSizeHint ) );
@@ -210,7 +212,7 @@ namespace Distortion {
         ++idx;
 
         for( size_t j = 0; j < imagePoints[i].size(); ++j ) {
-          factory.add( problem, objectPoints[i][j], imagePoints[i][j], p );
+          factory.addCorrespondence( problem, objectPoints[i][j], imagePoints[i][j], p );
         }
       }
     }
@@ -218,17 +220,21 @@ namespace Distortion {
     //if( flags & CALIB_FIX_SKEW )
     // Skew is always fixed in OpenCV 3.0.
     problem.SetParameterBlockConstant( &alpha );
+    problem.SetParameterBlockConstant( camera );
 
-    problem.SetParameterUpperBound( camera, 2, 1920 );
-    problem.SetParameterUpperBound( camera, 3, 1080 );
-    problem.SetParameterLowerBound( camera, 0, 0 );
-    problem.SetParameterLowerBound( camera, 1, 0 );
-    problem.SetParameterLowerBound( camera, 2, 0 );
-    problem.SetParameterLowerBound( camera, 3, 0 );
+    problem.SetParameterLowerBound( camera, 0, 1 );
+    problem.SetParameterLowerBound( camera, 1, 1 );
+    problem.SetParameterLowerBound( camera, 2, _imgSizeHint.width * 0.25 );
+    problem.SetParameterUpperBound( camera, 2, _imgSizeHint.width * 0.75 );
+    problem.SetParameterLowerBound( camera, 3, _imgSizeHint.height * 0.25 );
+    problem.SetParameterUpperBound( camera, 3, _imgSizeHint.height * 0.75 );
 
     ceres::Solver::Options options;
-    options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;
+    options.minimizer_type = ceres::TRUST_REGION; // ceres::LINE_SEARCH;
+    //options.line_search_direction_type = ceres::LBFGS;
+    options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;  //ceres::DENSE_QR;
     options.max_num_iterations = criteria.maxCount;
+    options.use_nonmonotonic_steps = true;
     options.minimizer_progress_to_stdout = true;
 
     // This should be configurable by the end user

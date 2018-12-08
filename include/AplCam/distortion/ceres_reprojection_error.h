@@ -1,12 +1,11 @@
-#ifndef __CERES_REPROJECTION_ERROR_H__
-#define __CERES_REPROJECTION_ERROR_H__
+#pragma once
 
 #include <ceres/ceres.h>
 #include <ceres/rotation.h>
 
 namespace Distortion {
   // Base class for AutoDiffCostFunction'able functors.   Provides
-  // functions common to both Ceres-based solvers.
+  // functions usable for all Ceres-based solvers.
 
   struct ReprojectionError {
     ReprojectionError(double obs_x, double obs_y, double world_x, double world_y )
@@ -50,5 +49,3 @@ namespace Distortion {
     };
 
   }
-
-#endif

@@ -10,6 +10,8 @@
 #include <ceres/rotation.h>
 // Neuter GoogleLogging, which is included by Ceres
 #undef LOG
+#undef LOG_IF
+#undef CHECK
 
 #include <boost/thread.hpp>
 
@@ -44,17 +46,17 @@ namespace Distortion {
       {
         //
         // camera is a 4-vector
-        //    2 focal length
-        //    2 camera center
+        //    2 focal length:  fx, fy
+        //    2 camera center: cx, cy
         //
         // alpha is a 1-vector (separate so it can be set fixed/constant)
         //
         // k12 is a 2-vector: k1 and k2 by opencv
         // p12 is a 2-vector: p1 and p2 by opencv
         // k3  is a 1-vector: k3 by openv
-        // k456 is a 3-vector: k456 by opencv
+        // k456 is a 3-vector: k_{4,5,6} by opencv
         //
-        // pose is a 6-vector
+        // pose is a 6-vector of the pose of the calibration object
         //    3 angles
         //    3 translations
         // pose[0,1,2] are an angle-axis rotation.
@@ -85,7 +87,7 @@ namespace Distortion {
       : camera_(camera), alpha_(alpha), dist_(dist), lossFunc_( lossF )
     {;}
 
-    void add( ceres::Problem &problem, const ObjectPoint &obj, const ImagePoint &img, double *pose )
+    void addCorrespondence( ceres::Problem &problem, const ObjectPoint &obj, const ImagePoint &img, double *pose )
     {
       ceres::CostFunction *costFunction = (new ceres::AutoDiffCostFunction<RadialDistortionReprojError,2,4,1,2,2,1,3,6>(
             new RadialDistortionReprojError( img[0], img[1], obj[0], obj[1] ) ) );
@@ -142,9 +144,8 @@ namespace Distortion {
       }
     }
 
-    LOG(INFO) << "From " << objectPoints.size() << " images, using " << totalPoints << " from " << goodImages << " images" << endl;
-
-    LOG(INFO) << "Dist coeffs: " << _distCoeffs;
+    LOG(INFO) << "From " << objectPoints.size() << " images, using " << totalPoints << " points from " << goodImages << " of the images.";
+    LOG(INFO) << "Initial distortion coefficients: " << _distCoeffs;
 
     double camera[4] = { _fx, _fy, _cx, _cy };
     double alpha = _alpha;
@@ -160,13 +161,13 @@ namespace Distortion {
       _distCoeffs[6] = 0.0;
       _distCoeffs[7] = 0.0;
     } else {
-      cout << "Using rational model (with k4-k6)" << endl;
+      LOG(INFO) << "Using rational model (with k4-k6)";
     }
 
     if( flags & CV_CALIB_ZERO_TANGENT_DIST ) {
       _distCoeffs[2] = 0.0;
       _distCoeffs[3] = 0.0;
-      cout << "Fixing tangential distortion to zero" << endl;
+      LOG(INFO) << "Fixing tangential distortion to zero";
     }
 
     ceres::LossFunction *lossFunc =  NULL;
@@ -189,7 +190,7 @@ namespace Distortion {
 
         double *p = &( pose[idx*6] );
 
-        // Mildly awkward
+        // Mildly awkward, copy the initial values from result into the pose vector
         p[0] = result.rvecs[i][0];
         p[1] = result.rvecs[i][1];
         p[2] = result.rvecs[i][2];
@@ -200,7 +201,7 @@ namespace Distortion {
         ++idx;
 
         for( size_t j = 0; j < imagePoints[i].size(); ++j ) {
-          factory.add( problem, objectPoints[i][j], imagePoints[i][j], p );
+          factory.addCorrespondence( problem, objectPoints[i][j], imagePoints[i][j], p );
         }
       }
     }
@@ -218,10 +219,10 @@ namespace Distortion {
 
     problem.SetParameterLowerBound( camera, 0, 1 );
     problem.SetParameterLowerBound( camera, 1, 1 );
-    problem.SetParameterLowerBound( camera, 2, 0 );
-    problem.SetParameterLowerBound( camera, 3, 0 );
-    problem.SetParameterUpperBound( camera, 2, _imgSizeHint.width );
-    problem.SetParameterUpperBound( camera, 3, _imgSizeHint.height );
+    problem.SetParameterLowerBound( camera, 2, _imgSizeHint.width * 0.25 );
+    problem.SetParameterUpperBound( camera, 2, _imgSizeHint.width * 0.75 );
+    problem.SetParameterLowerBound( camera, 3, _imgSizeHint.height * 0.25 );
+    problem.SetParameterUpperBound( camera, 3, _imgSizeHint.height * 0.75 );
 
     // Fragile
     if( flags & CV_CALIB_ZERO_TANGENT_DIST ) problem.SetParameterBlockConstant( &(_distCoeffs[2]) );
@@ -240,6 +241,7 @@ namespace Distortion {
     ceres::Solve(options, &problem, &summary);
     LOG(INFO) << summary.FullReport();
 
+    // Then copy from the pose vector back to results
     for( size_t i = 0, idx=0; i < objectPoints.size(); ++i ) {
       if( result.status[i] ) {
         result.rvecs[i] = Vec3d( &(pose[idx*6]) );
@@ -249,7 +251,6 @@ namespace Distortion {
 
       //LOG(INFO) << "Result: " << (result.status[i] ? "GOOD" : "BAD") << endl << result.rvecs[i] << endl << result.tvecs[i];
     }
-
 
 
     delete[] pose;
