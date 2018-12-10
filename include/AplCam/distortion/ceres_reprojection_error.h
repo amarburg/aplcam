@@ -22,6 +22,16 @@ namespace Distortion {
     }
 
     template <typename T>
+    void txQuaternionToCameraFrame( const T* const pose, T *p ) const
+    {
+      const T point[3] = { T( worldX ), T( worldY ), T( 0.0 ) };
+      ceres::QuaternionRotatePoint(pose, point, p);
+      p[0] += pose[4];
+      p[1] += pose[5];
+      p[2] += pose[6];
+    }
+
+    template <typename T>
     bool projectAndComputeError(const T* const camera,
       const T* const alpha,
       const T* const pp,
@@ -32,7 +42,7 @@ namespace Distortion {
         const T &cx = camera[2];
         const T &cy = camera[3];
         const T &xpp = pp[0],
-        &ypp = pp[1];
+                &ypp = pp[1];
 
         T predictedX = fx*(xpp + alpha[0]*ypp) + cx;
         T predictedY = fy* ypp                 + cy;

@@ -37,13 +37,13 @@ namespace Distortion {
   {
     result.resize( objectPoints.size() );
 
-    const int minPoints = 3;
-
-    for( size_t i = 0; i < objectPoints.size(); ++i ) {
-      if( objectPoints[i].size() > minPoints && objectPoints[i].size() == imagePoints[i].size() ) {
-        result.status[i] = true;
-      }
-    }
+    // const int minPoints = 3;
+    //
+    // for( size_t i = 0; i < objectPoints.size(); ++i ) {
+    //   if( objectPoints[i].size() > minPoints && objectPoints[i].size() == imagePoints[i].size() ) {
+    //     result.status[i] = true;
+    //   }
+    // }
 
     doCalibrate( objectPoints, imagePoints, image_size, result, flags, criteria );
 

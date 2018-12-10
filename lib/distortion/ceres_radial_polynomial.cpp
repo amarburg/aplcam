@@ -117,15 +117,17 @@ namespace Distortion {
     // If camera matris is unset, get a default from the focal length and img size hints
     if( norm( matx(), Mat::eye(3,3,CV_64F) ) < 1e-9 ) {
       LOG(INFO) << "Setting initial camera estimate.";
-      //setCamera( InitialCameraEstimate( _imageSizeHint ) );
       setCamera( _focalLengthHint, _focalLengthHint, _imgSizeHint.width/2.0, _imgSizeHint.height/2.0, 0 );
+      LOG(INFO) << "Setting initial camera estimate with fx = " << _fx << ", fy = " << _fy << "; cx = " << _cx << ", cy = " << _cy;
     }
 
     int totalPoints = 0;
     int goodImages = 0;
 
+    const int minPoints = 5;
+
     for( size_t i = 0; i < objectPoints.size(); ++i )  {
-      if( result.status[i] ) {
+      if( objectPoints[i].size() > minPoints ) {
         // In this case, we can use OpenCV's solvePnP directly
         bool pnpRes = solvePnP( objectPoints[i], imagePoints[i], mat(), _distCoeffs, result.rvecs[i], result.tvecs[i], false, CV_ITERATIVE );
 
@@ -139,9 +141,17 @@ namespace Distortion {
           continue;
         }
 
+        result.status[i] = true;
+
+
         ++goodImages;
         totalPoints += objectPoints[i].size();
       }
+    }
+
+    if( goodImages < 10 ) {
+      LOG(WARNING) << "Only got " << goodImages << ".  Not enough to calibrate!";
+      return false;
     }
 
     LOG(INFO) << "From " << objectPoints.size() << " images, using " << totalPoints << " points from " << goodImages << " of the images.";

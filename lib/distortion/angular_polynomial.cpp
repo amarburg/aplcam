@@ -46,9 +46,8 @@ namespace Distortion {
 
   AngularPolynomial::AngularPolynomial( const Vec8d &coeffs )
     : DistortionModel( Vec4d( coeffs[0], coeffs[1], coeffs[2], coeffs[3] )),
-    _distCoeffs( Vec4d( coeffs[4], coeffs[5], coeffs[6], coeffs[7] ) )
+      _distCoeffs( Vec4d( coeffs[4], coeffs[5], coeffs[6], coeffs[7] ) )
   {;}
-
 
   AngularPolynomial::AngularPolynomial( const Vec4d &distCoeffs, const Matx33d &cam )
     : DistortionModel( cam ), _distCoeffs( distCoeffs )
@@ -76,11 +75,11 @@ namespace Distortion {
           const T* const pose,
           T* residuals) const
       {
-        // pose is a 6-vector
-        //    3 angles
+        // pose is a 7-vector
+        //    4 quaternion
         //    3 translations
         //
-        // alpha is a 1-vector (separate so it can be set Constant/Variable)
+        // alpha is a 1-vector (separated out so it can be set Constant or Variable)
         //
         // camera i s 8-vector
         //    2 focal length
@@ -89,8 +88,10 @@ namespace Distortion {
         //
         // pose[0,1,2] are an angle-axis rotation.
         //
+
+        // Rotate the world point into the camera frame as p
         T p[3];
-        txToCameraFrame( pose, p );
+        txQuaternionToCameraFrame( pose, p );
 
         T theta = atan2( sqrt( p[0]*p[0] + p[1]*p[1] ), p[2]  );
         T psi   = atan2( p[1], p[0] );
@@ -104,7 +105,7 @@ namespace Distortion {
         const T &k3 = dist[2];
         const T &k4 = dist[3];
 
-        T theta2 =  theta*theta;
+        T theta2 = theta *theta;
         T theta4 = theta2*theta2;
         T theta6 = theta4*theta2;
         T theta8 = theta4*theta4;
@@ -120,23 +121,20 @@ namespace Distortion {
 
   };
 
-  struct AngularDistortionFactory {
-    AngularDistortionFactory( double *camera, double *alpha, double *dist, ceres::LossFunction *lossF = NULL )
-      : camera_(camera), alpha_(alpha), dist_(dist), lossFunc_( lossF )
-    {;}
-
-    void addCorrespondence( ceres::Problem &problem, const ObjectPoint &obj, const ImagePoint &img, double * )
-    {
-
-      ceres::CostFunction *costFunction = (new ceres::AutoDiffCostFunction<AngularDistortionReprojError, 2, 4, 1, 4, 6>(
-            new AngularDistortionReprojError( img[0], img[1], obj[0], obj[1] ) ) );
-
-      problem.AddResidualBlock( costFunction, lossFunc_, camera_, alpha_, dist_, pose );
-    }
-
-    double *camera_, *alpha_, *dist_, *pose_;
-    ceres::LossFunction *lossFunc_;
-  };
+  // struct AngularDistortionFactory {
+  //   AngularDistortionFactory( double *camera, double *alpha, double *dist, ceres::LossFunction *lossF = NULL )
+  //     : camera_(camera), alpha_(alpha), dist_(dist), lossFunc_( lossF )
+  //   {;}
+  //
+  //   void addCorrespondence( ceres::Problem &problem, const ObjectPoint &obj, const ImagePoint &img, double *qpose )
+  //   {
+  //
+  //
+  //   }
+  //
+  //   double *camera_, *alpha_, *dist_;
+  //   ceres::LossFunction *lossFunc_;
+  // };
 
 
 
@@ -151,32 +149,46 @@ namespace Distortion {
 
     // If camera matrix is unset, get a default from the focal length and img size hints
     if( norm( matx(), Mat::eye(3,3,CV_64F) ) < 1e-9 ) {
-      LOG(INFO) << "Setting initial camera estimate.";
       //setCamera( InitialCameraEstimate( _imageSizeHint ) );
       setCamera( _focalLengthHint, _focalLengthHint, _imgSizeHint.width/2.0, _imgSizeHint.height/2.0, 0 );
+
+      LOG(INFO) << "Setting initial camera estimate with fx = " << _fx << ", fy = " << _fy << "; cx = " << _cx << ", cy = " << _cy;
+
     }
 
     int totalPoints = 0;
     int goodImages = 0;
 
-    for( size_t i = 0; i < objectPoints.size(); ++i )  {
-      if( result.status[i] ) {
-        ImagePointsVec undistorted =  normalizeUndistortImage( imagePoints[i] );
+    const int minPoints = 5;
 
-        bool pnpRes = solvePnP( objectPoints[i], undistorted, mat(), Mat::zeros(1,8,CV_64F),
-            result.rvecs[i], result.tvecs[i], false, CV_ITERATIVE );
+    for( size_t i = 0; i < objectPoints.size(); ++i )  {
+      if( objectPoints[i].size() > minPoints ) {
+      //ImagePointsVec undistorted =  normalizeUndistortImage( imagePoints[i] );
+
+      bool pnpRes = solvePnP( objectPoints[i], imagePoints[i], mat(), Mat::zeros(1,8,CV_64F), result.rvecs[i], result.tvecs[i], false, CV_ITERATIVE );
+
+
+        // bool pnpRes = solvePnP( objectPoints[i], imagePoints[i], mat(), Mat::zeros(1,8,CV_64F),
+        //      result.rvecs[i], result.tvecs[i], false, CV_ITERATIVE );
 
         if( !pnpRes ) {
           result.status[i] = false;
           continue;
         }
 
+        result.status[i] = true;
+
         ++goodImages;
         totalPoints += objectPoints[i].size();
       }
     }
 
-    LOG(INFO) << "From " << objectPoints.size() << " images, using " << totalPoints << " point from " << goodImages << " of the images" << endl;
+    if( goodImages < 10 ) {
+      LOG(WARNING) << "Only got " << goodImages << ".  Not enough to calibrate!";
+      return false;
+    }
+
+    LOG(INFO) << "From " << objectPoints.size() << " images, using " << totalPoints << " points from " << goodImages << " of the images" << endl;
 
 
     double camera[4] = { _fx, _fy, _cx, _cy };
@@ -192,27 +204,37 @@ namespace Distortion {
       lossFunc = new ceres::HuberLoss( 4.0 );
     }
 
-    double *pose = new double[ goodImages * 6];
-    AngularDistortionFactory factory(  camera, &alpha, (_distCoeffs.val), lossFunc );
+    //AngularDistortionFactory factory(  camera, &alpha, (_distCoeffs.val), lossFunc );
+
+    ceres::LocalParameterization *se3_param = new ceres::ProductParameterization(new ceres::QuaternionParameterization(), new ceres::IdentityParameterization(3));
 
     ceres::Problem problem;
+
+    double *pose = new double[ goodImages * 7];
     for( size_t i = 0, idx = 0; i < objectPoints.size(); ++i ) {
       if( result.status[i] ) {
 
-        double *p = &( pose[idx*6] );
+        double *p = &( pose[idx*7] );
 
-        // Mildly awkward
-        p[0] = result.rvecs[i][0];
-        p[1] = result.rvecs[i][1];
-        p[2] = result.rvecs[i][2];
-        p[3] = result.tvecs[i][0];
-        p[4] = result.tvecs[i][1];
-        p[5] = result.tvecs[i][2];
+        ceres::AngleAxisToQuaternion(result.rvecs[i].val, p );
+
+        p[4] = result.tvecs[i][0];
+        p[5] = result.tvecs[i][1];
+        p[6] = result.tvecs[i][2];
 
         ++idx;
 
         for( size_t j = 0; j < imagePoints[i].size(); ++j ) {
-          factory.addCorrespondence( problem, objectPoints[i][j], imagePoints[i][j], p );
+
+          ceres::CostFunction *costFunction = (new ceres::AutoDiffCostFunction<AngularDistortionReprojError, 2, 4, 1, 4, 7>(
+                new AngularDistortionReprojError( imagePoints[i][j][0], imagePoints[i][j][1], objectPoints[i][j][0], objectPoints[i][j][1] ) ) );
+
+          problem.AddResidualBlock( costFunction, lossFunc, camera, &alpha, (_distCoeffs.val), p );
+
+          //factory.addCorrespondence( problem, objectPoints[i][j], imagePoints[i][j], p );
+
+          problem.SetParameterization( p, se3_param );
+
         }
       }
     }
@@ -220,7 +242,7 @@ namespace Distortion {
     //if( flags & CALIB_FIX_SKEW )
     // Skew is always fixed in OpenCV 3.0.
     problem.SetParameterBlockConstant( &alpha );
-    problem.SetParameterBlockConstant( camera );
+    //problem.SetParameterBlockConstant( _distCoeffs.val );
 
     problem.SetParameterLowerBound( camera, 0, 1 );
     problem.SetParameterLowerBound( camera, 1, 1 );
@@ -231,10 +253,15 @@ namespace Distortion {
 
     ceres::Solver::Options options;
     options.minimizer_type = ceres::TRUST_REGION; // ceres::LINE_SEARCH;
-    //options.line_search_direction_type = ceres::LBFGS;
-    options.linear_solver_type = ceres::SPARSE_NORMAL_CHOLESKY;  //ceres::DENSE_QR;
+    if( options.minimizer_type == ceres::TRUST_REGION ) {
+      options.trust_region_strategy_type = ceres::LEVENBERG_MARQUARDT;
+      options.use_nonmonotonic_steps = true;
+    } else if( options.minimizer_type == ceres::LINE_SEARCH ) {
+      options.line_search_direction_type = ceres::LBFGS;
+    }
+
+    options.linear_solver_type = ceres::DENSE_SCHUR; //ceres::SPARSE_NORMAL_CHOLESKY;  //ceres::DENSE_QR;
     options.max_num_iterations = criteria.maxCount;
-    options.use_nonmonotonic_steps = true;
     options.minimizer_progress_to_stdout = true;
 
     // This should be configurable by the end user
@@ -246,8 +273,8 @@ namespace Distortion {
 
     for( size_t i = 0, idx=0; i < objectPoints.size(); ++i ) {
       if( result.status[i] ) {
-        result.rvecs[i] = Vec3d( &(pose[idx*6]) );
-        result.tvecs[i] = Vec3d( &(pose[idx*6+3]) );
+        ceres::QuaternionToAngleAxis( &(pose[idx*7]), result.rvecs[i].val );
+        result.tvecs[i] = Vec3d( &(pose[idx*7+4]) );
         ++idx;
       }
     }
